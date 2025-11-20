@@ -1,7 +1,9 @@
 <?php
+
 namespace application\models;
 
 use ItForFree\SimpleMVC\MVC\Model;
+
 /**
  * Класс для обработки пользователей
  */
@@ -9,83 +11,130 @@ class UserModel extends Model
 {
     // Свойства
     /**
-    * @var string логин пользователя
-    */
+     * @var string логин пользователя
+     */
     public $login = null;
-    
+
     public ?int $id = null;
 
     /**
-    * @var string пароль пользователя
-    */
+     * @var string пароль пользователя
+     */
     public $pass = null;
-    
+
     /**
-    * @var string роль пользователя
-    */
+     * @var string роль пользователя
+     */
     protected $role = null;
-    
+
     public $email = null;
-    
+
     public $timestamp = null;
-    
+
     /**
      * @var string Критерий сортировки строк таблицы
      */
     public string $orderBy = "login ASC";
-    
+
     /**
      *  @var string название таблицы
      */
     public string $tableName = 'users';
-    
+
     public $salt = null;
-    
+    public function __construct($data = [])
+    {
+        if (!empty($data) && is_array($data)) {
+            $this->id = $data['id'] ?? null;
+            $this->login = $data['login'] ?? null;
+            $this->email = $data['email'] ?? null;
+            $this->pass = $data['pass'] ?? null;
+            $this->salt = $data['salt'] ?? null;
+            $this->timestamp = $data['timestamp'] ?? null;
+
+            // Для protected свойства role используем сеттер
+            if (isset($data['role'])) {
+                $this->setRole($data['role']);
+            }
+        }
+    }
+
 
     public function insert()
     {
-        $sql = "INSERT INTO $this->tableName (timestamp, login, salt, pass, role, email) VALUES (:timestamp, :login, :salt, :pass, :role, :email)"; 
-        $st = $this->pdo->prepare ( $sql );
-        $st->bindValue( ":timestamp", (new \DateTime('NOW'))->format('Y-m-d H:i:s'), \PDO::PARAM_STMT);
-        $st->bindValue( ":login", $this->login, \PDO::PARAM_STR );
-        
+        $sql = "INSERT INTO $this->tableName (timestamp, login, salt, pass, role, email) VALUES (:timestamp, :login, :salt, :pass, :role, :email)";
+        $st = $this->pdo->prepare($sql);
+        $st->bindValue(":timestamp", (new \DateTime('NOW'))->format('Y-m-d H:i:s'), \PDO::PARAM_STMT);
+        $st->bindValue(":login", $this->login, \PDO::PARAM_STR);
+
         //Хеширование пароля
-        $this->salt = rand(0,1000000);
-        $st->bindValue( ":salt", $this->salt, \PDO::PARAM_STR );
-//        \DebugPrinter::debug($this->salt);
-        
+        $this->salt = rand(0, 1000000);
+        $st->bindValue(":salt", $this->salt, \PDO::PARAM_STR);
+        //        \DebugPrinter::debug($this->salt);
+
         $this->pass .= $this->salt;
         $hashPass = password_hash($this->pass, PASSWORD_BCRYPT);
-//        \DebugPrinter::debug($hashPass);
-        $st->bindValue( ":pass", $hashPass, \PDO::PARAM_STR );
-        
-        $st->bindValue( ":role", $this->role, \PDO::PARAM_STR );
-        $st->bindValue( ":email", $this->email, \PDO::PARAM_STR );
+        //        \DebugPrinter::debug($hashPass);
+        $st->bindValue(":pass", $hashPass, \PDO::PARAM_STR);
+
+        $st->bindValue(":role", $this->role, \PDO::PARAM_STR);
+        $st->bindValue(":email", $this->email, \PDO::PARAM_STR);
         $st->execute();
         $this->id = $this->pdo->lastInsertId();
     }
-    
+
     public function update()
     {
-        $sql = "UPDATE $this->tableName SET timestamp=:timestamp, login=:login, pass=:pass, email=:email  WHERE id = :id";  
-        $st = $this->pdo->prepare ( $sql );
-        
-        $st->bindValue( ":timestamp", (new \DateTime('NOW'))->format('Y-m-d H:i:s'), \PDO::PARAM_STMT);
-        $st->bindValue( ":login", $this->login, \PDO::PARAM_STR );
-        
-        // Хеширование пароля
-        $this->salt = rand(0,1000000);
-        //$st->bindValue( ":salt", $this->salt, \PDO::PARAM_STR );
-        //$this->pass .= $this->salt;
-        //$hashPass = password_hash($this->pass, PASSWORD_BCRYPT);
-        $st->bindValue( ":pass", $this->pass, \PDO::PARAM_STR );
-        
-        //$st->bindValue( ":role", $this->role, \PDO::PARAM_STR );
-        $st->bindValue( ":email", $this->email, \PDO::PARAM_STR );
-        $st->bindValue( ":id", $this->id, \PDO::PARAM_INT );
+        // Если пароль не пустой - обновляем его вместе с солью
+        if (!empty($this->pass)) {
+            $sql = "UPDATE $this->tableName SET timestamp=:timestamp, login=:login, salt=:salt, pass=:pass, role=:role, email=:email WHERE id = :id";
+            $st = $this->pdo->prepare($sql);
+
+            $st->bindValue(":timestamp", (new \DateTime('NOW'))->format('Y-m-d H:i:s'), \PDO::PARAM_STMT);
+            $st->bindValue(":login", $this->login, \PDO::PARAM_STR);
+
+            // Хеширование нового пароля
+            $this->salt = rand(0, 1000000);
+            $st->bindValue(":salt", $this->salt, \PDO::PARAM_STR);
+            $this->pass .= $this->salt;
+            $hashPass = password_hash($this->pass, PASSWORD_BCRYPT);
+            $st->bindValue(":pass", $hashPass, \PDO::PARAM_STR);
+
+            $st->bindValue(":role", $this->role, \PDO::PARAM_STR);
+            $st->bindValue(":email", $this->email, \PDO::PARAM_STR);
+            $st->bindValue(":id", $this->id, \PDO::PARAM_INT);
+        } else {
+            // Если пароль пустой - не обновляем пароль и соль
+            $sql = "UPDATE $this->tableName SET timestamp=:timestamp, login=:login, role=:role, email=:email WHERE id = :id";
+            $st = $this->pdo->prepare($sql);
+
+            $st->bindValue(":timestamp", (new \DateTime('NOW'))->format('Y-m-d H:i:s'), \PDO::PARAM_STMT);
+            $st->bindValue(":login", $this->login, \PDO::PARAM_STR);
+            $st->bindValue(":role", $this->role, \PDO::PARAM_STR);
+            $st->bindValue(":email", $this->email, \PDO::PARAM_STR);
+            $st->bindValue(":id", $this->id, \PDO::PARAM_INT);
+        }
+
         $st->execute();
     }
-    
+
+
+    /**
+     * Установить роль пользователя
+     */
+    public function setRole($role)
+    {
+        $this->role = $role;
+    }
+
+    /**
+     * Получить роль пользователя
+     */
+    public function getUserRole()
+    {
+        return $this->role;
+    }
+
     /**
      * Вернёт id пользователя
      * 
@@ -93,39 +142,40 @@ class UserModel extends Model
      */
     public function getId()
     {
-        if ($this->userName !== 'guest'){
+        if ($this->userName !== 'guest') {
             $sql = "SELECT id FROM users where login = :userName";
-            $st = $this->pdo->prepare($sql); 
-            $st -> bindValue( ":userName", $this->userName, \PDO::PARAM_STR );
-            $st -> execute();
+            $st = $this->pdo->prepare($sql);
+            $st->bindValue(":userName", $this->userName, \PDO::PARAM_STR);
+            $st->execute();
             $row = $st->fetch();
-            return $row['id']; 
-        } else  {
+            return $row['id'];
+        } else {
             return null;
-        }  
+        }
     }
-    
+
     /**
      * Проверка логина и пароля пользователя.
      */
-    public function getAuthData($login): ?array {
-	$sql = "SELECT salt, pass FROM users WHERE login = :login";
-	$st = $this->pdo->prepare($sql);
-	$st->bindValue(":login", $login, \PDO::PARAM_STR);
-	$st->execute();
-	$authData = $st->fetch();
-	return $authData ? $authData : null;
+    public function getAuthData($login): ?array
+    {
+        $sql = "SELECT salt, pass FROM users WHERE login = :login";
+        $st = $this->pdo->prepare($sql);
+        $st->bindValue(":login", $login, \PDO::PARAM_STR);
+        $st->execute();
+        $authData = $st->fetch();
+        return $authData ? $authData : null;
     }
-    
+
     /**
      * Проверяем активность пользователя.
      */
-    public function getRole($login): array {
-	$sql = "SELECT role FROM users WHERE login = :login";
-	$st = $this->pdo->prepare($sql);
-	$st->bindValue(":login", $login, \PDO::PARAM_STR);
-	$st->execute();	
-	return $st->fetch();
+    public function getRole($login): array
+    {
+        $sql = "SELECT role FROM users WHERE login = :login";
+        $st = $this->pdo->prepare($sql);
+        $st->bindValue(":login", $login, \PDO::PARAM_STR);
+        $st->execute();
+        return $st->fetch();
     }
-
 }

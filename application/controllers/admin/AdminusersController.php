@@ -65,14 +65,24 @@ class AdminusersController extends \ItForFree\SimpleMVC\MVC\Controller
      */
     public function editAction()
     {
-        $id = $_GET['id'];
+         $id = $_GET['id'];
         $Url = Config::get('core.router.class');
         
-        if (!empty($_POST)) { // это выполняется нормально.
+        if (!empty($_POST)) { 
             
             if (!empty($_POST['saveChanges'] )) {
                 $Adminusers = new UserModel();
-                $newAdminusers = $Adminusers->loadFromArray($_POST);
+                $userData = [
+                'id' => $id,
+                'login' => $_POST['login'],
+                'email' => $_POST['email'],
+                'role' => $_POST['role']
+            ];
+            if (!empty($_POST['pass'])) {
+                $userData['pass'] = $_POST['pass'];
+            }
+                //$newAdminusers = $Adminusers->loadFromArray($userData);
+                $newAdminusers=new UserModel($userData);
                 $newAdminusers->update();
                 $this->redirect($Url::link("admin/adminusers/index&id=$id"));
             } 
