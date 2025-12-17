@@ -7,7 +7,7 @@ $User = Config::getObject('core.user.class');
 
 //vpre($User->explainAccess("admin/adminusers/index"));
 ?>
-
+<!--
 <ul class="nav">
     
     <?php  if ($User->isAllowed("admin/notes/index")): ?>
@@ -22,3 +22,4 @@ $User = Config::getObject('core.user.class');
     </li>
     <?php endif; ?>  
 </ul>
+-->
