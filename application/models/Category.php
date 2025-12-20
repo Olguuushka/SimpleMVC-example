@@ -60,4 +60,33 @@ class Category extends Model
     {
         return self::getList(1000000, $order)['results'];
     }
+
+     /**
+     * Получить список категорий
+     */
+    public function getList(int $numRows = 1000000, string $order = "name ASC"): array
+    {
+        if (empty($order)) {
+            $order = "name ASC"; // значение по умолчанию
+        }
+
+        $sql = "SELECT * FROM categories ORDER BY $order LIMIT :numRows";
+        $st = $this->pdo->prepare($sql);
+        $st->bindValue(":numRows", $numRows, \PDO::PARAM_INT);
+        $st->execute();
+
+        $list = array();
+        while ($row = $st->fetch()) {
+            $category = new self($row);
+            $list[] = $category;
+        }
+
+        $sql = "SELECT COUNT(*) AS totalRows FROM categories";
+        $totalRows = $this->pdo->query($sql)->fetch();
+
+        return array(
+            "results" => $list,
+            "totalRows" => $totalRows[0]
+        );
+    }
 }

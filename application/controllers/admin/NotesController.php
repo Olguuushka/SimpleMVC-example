@@ -6,6 +6,7 @@ use application\models\Category;
 use application\models\Subcategory;
 use application\models\UserModel;
 use ItForFree\SimpleMVC\Config;
+use application\assets\AdminAsset;
 
 
 
@@ -18,6 +19,13 @@ use ItForFree\SimpleMVC\Config;
 class NotesController extends \ItForFree\SimpleMVC\MVC\Controller
 {
     
+ public function __construct()
+    {
+        parent::__construct();
+        AdminAsset::add(); // подключаем стили админки
+    }
+
+
     public string $layoutPath = 'admin-main.php';
     
     
@@ -80,12 +88,12 @@ class NotesController extends \ItForFree\SimpleMVC\MVC\Controller
                     'categoryId' => $_POST['categoryId'] ?? null,
                     'subcategoryId' => $_POST['subcategoryId'] ?? null,
                     'active' => $_POST['active'] ?? 1,
-                    'publicationDate' => time() // Текущее время как UNIX timestamp
+                    'publicationDate' => $_POST['publicationDate'] ?? date('Y-m-d')
                 ];
                 
                 // Создаем статью
                 $newArticle = new Article($articleData);
-                $newArticle->save(); // Используем метод save() из модели Article
+                $newArticle->save(); 
                 
                 // Добавляем авторов
                 if (isset($_POST['authors']) && is_array($_POST['authors'])) {
@@ -102,13 +110,18 @@ class NotesController extends \ItForFree\SimpleMVC\MVC\Controller
         else {
            // Получаем данные для формы
             $Category = new Category();
-            $categories = $Category->getList();
+             $categoriesResult = $Category->getList();
+            $categories = $categoriesResult['results'];
             
             $Subcategory = new Subcategory();
-            $subcategories = $Subcategory->getList();
+            $subcategoriesResult = $Subcategory->getList();
+            $subcategories = $subcategoriesResult['results'];
             
             $UserModel = new UserModel();
-            $users = $UserModel->getAllUsers();
+            $usersResult = $UserModel->getActiveUsersList();
+            $users = $usersResult['results'];
+
+            //передаем переменные в представление
             
             $addNoteTitle = "Добавление новой статьи";
             $this->view->addVar('addNoteTitle', $addNoteTitle);
@@ -156,6 +169,14 @@ class NotesController extends \ItForFree\SimpleMVC\MVC\Controller
                 $existingArticle->subcategoryId = !empty($_POST['subcategoryId']) ? (int)$_POST['subcategoryId'] : null;
                 $existingArticle->active = $_POST['active'] ?? 0;
                 
+
+                 if (isset($_POST['publicationDate']) && !empty($_POST['publicationDate'])) {
+                    // Преобразуем из формата формы в Unix timestamp или правильный формат даты
+                    $existingArticle->publicationDate = strtotime($_POST['publicationDate']);
+                } else {
+                    $existingArticle->publicationDate = time(); // Текущее время
+                }
+
                 // Обновляем авторов
                 if (isset($_POST['authors']) && is_array($_POST['authors'])) {
                     $existingArticle->authors = $_POST['authors'];
@@ -185,13 +206,16 @@ class NotesController extends \ItForFree\SimpleMVC\MVC\Controller
             
             // Получаем данные для формы
             $Category = new Category();
-            $categories = $Category->getList();
+             $categoriesResult = $Category->getList();
+            $categories = $categoriesResult['results']; // Извлекаем только массив объектов
             
             $Subcategory = new Subcategory();
-            $subcategories = $Subcategory->getList();
+            $subcategoriesResult = $Subcategory->getList();
+            $subcategories = $subcategoriesResult['results']; // Извлекаем только массив объектов
 
             $UserModel = new UserModel();
-            $users = $UserModel->getAllUsers();
+             $usersResult = $UserModel->getActiveUsersList();
+            $users = $usersResult['results']; // Извлекаем только массив объектов
             
              $editNoteTitle = "Редактирование статьи";
             
@@ -199,10 +223,11 @@ class NotesController extends \ItForFree\SimpleMVC\MVC\Controller
 
             $this->view->addVar('editNoteTitle', $editNoteTitle);
             
-            $this->view->addVar('categories', $categories);
-            $this->view->addVar('subcategories', $subcategories);
-            $this->view->addVar('users', $users);
-            $this->view->render('note/edit.php');   
+            $this->view->addVar('categories', $categories); // Передаем массив объектов
+            $this->view->addVar('subcategories', $subcategories); // Передаем массив объектов
+            $this->view->addVar('users', $users); // Передаем массив объектов пользователей
+
+            $this->view->render('note/edit.php');
         }
         
     }

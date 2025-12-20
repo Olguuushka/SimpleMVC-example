@@ -5,8 +5,8 @@
 $config = [
     'core' => [ // подмассив используемый самим ядром фреймворка
         'db' => [
-            'dns' => 'mysql:host=localhost;dbname=SimpleMVC',
-            'username' => 'root',
+            'dns' => 'mysql:host=localhost;dbname=SimpleMVC_cms',
+            'username' => 'myuser',
             'password' => '12345'
         ],
         'router' => [ // подсистема маршрутизация

@@ -183,6 +183,15 @@ class UserModel extends Model
         $st->execute();
         return $st->fetch() ?: ['role' => 'guest'];
     }
+
+     /**
+     * Получить всех пользователей (совместимость со старым кодом)
+     */
+    public function getAllUsers(): array
+    {
+        return $this->getList()['results'];
+    }
+    
     /**
      * Вернёт id пользователя
      */
@@ -279,10 +288,11 @@ class UserModel extends Model
      * Получить список всех пользователей
      * Переопределяем родительский метод
      */
-    public function getList(int $numRows = 1000000, string $orderBy = ''): array
+    public function getList(int $numRows = 1000000, string $order = "login ASC"): array
     {
-        // Используем свойство класса для сортировки если не передано
-        $order = $orderBy ?: $this->orderBy;
+        if (empty($order)) {
+            $order = "login ASC";
+        }
 
         $sql = "SELECT * FROM users ORDER BY $order LIMIT :numRows";
         $st = $this->pdo->prepare($sql);
@@ -351,7 +361,7 @@ class UserModel extends Model
 
             if ($authData) {
                 // Проверяем пароль (поддержка нового password_hash)
-                if (password_verify($password , $authData['pass'])) {
+                 if (password_verify($password, $authData['pass'])) {
                     return $user;
                 }
 
